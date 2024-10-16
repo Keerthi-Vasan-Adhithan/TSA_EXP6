@@ -31,20 +31,17 @@ from sklearn.metrics import mean_squared_error
 df = pd.read_csv('/content/apple_stock.csv')
 
 # Step 3: Initial data exploration
-print(df.head())  # Display first few rows
-print(df.info())  # Data information
-print(df.describe())  # Summary statistics
-
-# Ensure the 'Date' column is in datetime format
+print(df.head()) 
+print(df.info()) 
+print(df.describe()) 
 df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
 df.set_index('Date', inplace=True)
 
 # Step 4: Use 'Close' column as the stock price we're analyzing
-# Resample to daily frequency if needed (though stock data is already likely daily)
 daily_data = df['Close'].resample('D').mean()
 
 # Step 5: Handle missing values using interpolation
-daily_data = daily_data.interpolate()  # Interpolate missing values to avoid errors
+daily_data = daily_data.interpolate() 
 
 # Step 6: Plot the time series data
 plt.figure(figsize=(10, 6))
@@ -56,20 +53,16 @@ plt.legend()
 plt.show()
 
 # Step 7: Decompose the time series into its additive components and plot them
-# Ensure that the data has a frequency and decompose using seasonal_decompose
-daily_data = daily_data.asfreq('D')  # Ensure the data is in daily frequency
-decomposition = seasonal_decompose(daily_data, model='additive', period=252)  # Assuming yearly seasonality (252 trading days)
+daily_data = daily_data.asfreq('D')  
+decomposition = seasonal_decompose(daily_data, model='additive', period=252) 
 decomposition.plot()
 plt.show()
 
 # Step 8: Train/Test Split and RMSE Calculation
-# Split the data into train and test sets
-train_data = daily_data[:-252]  # Use all but the last 252 days for training (roughly 1 year)
-test_data = daily_data[-252:]   # Last 252 days for testing
-
+train_data = daily_data[:-252]  
+test_data = daily_data[-252:] 
 # Step 9: Fit a Holt-Winters model to the training data
-# Since stock data generally follows a trend but may not have clear seasonality, 
-# we assume a trend but no strong seasonality pattern (adjust as necessary)
+
 model = ExponentialSmoothing(train_data, trend='add', seasonal=None)  # Seasonal=None for non-seasonal data
 hw_model = model.fit()
 
@@ -88,7 +81,7 @@ print(f'Standard Deviation of Stock Price: {std_price}')
 
 # Step 13: Fit Holt-Winters model to the entire dataset and make future predictions
 hw_full_model = ExponentialSmoothing(daily_data, trend='add', seasonal=None).fit()
-forecast_periods = 252  # Predict the next 252 days (roughly 1 year)
+forecast_periods = 252 
 future_predictions = hw_full_model.forecast(forecast_periods)
 
 # Step 14: Plot the original stock prices and the predictions
@@ -100,10 +93,7 @@ plt.xlabel('Date')
 plt.ylabel('Stock Price')
 plt.legend()
 plt.show()
-
-# Optionally, print the forecasted values
 print(future_predictions)
-
 
 ```
 
