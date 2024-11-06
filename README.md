@@ -19,95 +19,87 @@ To create and implement Holt Winter's Method Model using python to predict consu
 9. Plot the original sales data and predictions
 ### PROGRAM:
 ```py
-# Step 1: Import necessary libraries
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from statsmodels.tsa.seasonal import seasonal_decompose
 from sklearn.metrics import mean_squared_error
 
-# Step 2: Load dataset and parse the 'Date' column as datetime
-df = pd.read_csv('/content/apple_stock.csv')
+# Load the uploaded dataset
+data = pd.read_csv('/content/apple_stock.csv')
 
-# Step 3: Initial data exploration
-print(df.head()) 
-print(df.info()) 
-print(df.describe()) 
-df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-df.set_index('Date', inplace=True)
+# Ensure 'Date' is in datetime format and set as index
+data['Date'] = pd.to_datetime(data['Date'])
+data.set_index('Date', inplace=True)
 
-# Step 4: Use 'Close' column as the stock price we're analyzing
-daily_data = df['Close'].resample('D').mean()
+# Resample data to get yearly closing prices
+yearly_data = data['Close'].resample('Y').last()
 
-# Step 5: Handle missing values using interpolation
-daily_data = daily_data.interpolate() 
-
-# Step 6: Plot the time series data
-plt.figure(figsize=(10, 6))
-plt.plot(daily_data, label='Daily Stock Prices')
-plt.title('Apple Stock Price (Daily)')
-plt.xlabel('Date')
-plt.ylabel('Price')
+# Plot yearly data
+plt.figure(figsize=(10, 5))
+plt.plot(yearly_data.index, yearly_data.values, label='Yearly Close Prices')
+plt.title('Yearly Close Prices')
+plt.xlabel('Year')
+plt.ylabel('Close Price')
 plt.legend()
 plt.show()
 
-# Step 7: Decompose the time series into its additive components and plot them
-daily_data = daily_data.asfreq('D')  
-decomposition = seasonal_decompose(daily_data, model='additive', period=252) 
-decomposition.plot()
-plt.show()
+# Split data into train and test sets (80% train, 20% test)
+train_size = int(len(yearly_data) * 0.8)
+train, test = yearly_data[:train_size], yearly_data[train_size:]
 
-# Step 8: Train/Test Split and RMSE Calculation
-train_data = daily_data[:-252]  
-test_data = daily_data[-252:] 
-# Step 9: Fit a Holt-Winters model to the training data
+# Fit Holt-Winters model on training data
+model = ExponentialSmoothing(train, trend="add", seasonal=None, seasonal_periods=1)  # No seasonality assumed
+fit = model.fit()
 
-model = ExponentialSmoothing(train_data, trend='add', seasonal=None)  # Seasonal=None for non-seasonal data
-hw_model = model.fit()
+# Forecast on test data
+predictions = fit.forecast(len(test))
 
-# Step 10: Make predictions for the test set
-predictions = hw_model.forecast(len(test_data))
+# Calculate RMSE
+rmse = np.sqrt(mean_squared_error(test, predictions))
+print(f'Test RMSE: {rmse}')
 
-# Step 11: Calculate RMSE
-rmse = np.sqrt(mean_squared_error(test_data, predictions))
-print(f'RMSE: {rmse}')
+# Refit model on entire data for future forecasting
+final_model = ExponentialSmoothing(yearly_data, trend="add", seasonal=None, seasonal_periods=1)  # No seasonality
+final_fit = final_model.fit()
 
-# Step 12: Mean and Standard Deviation of the entire dataset
-mean_price = daily_data.mean()
-std_price = daily_data.std()
-print(f'Mean Stock Price: {mean_price}')
-print(f'Standard Deviation of Stock Price: {std_price}')
+# Forecast the next 10 years
+future_steps = 10
+final_forecast = final_fit.forecast(steps=future_steps)
 
-# Step 13: Fit Holt-Winters model to the entire dataset and make future predictions
-hw_full_model = ExponentialSmoothing(daily_data, trend='add', seasonal=None).fit()
-forecast_periods = 252 
-future_predictions = hw_full_model.forecast(forecast_periods)
+# Plot training, test, and prediction data
+plt.figure(figsize=(12, 6))
 
-# Step 14: Plot the original stock prices and the predictions
-plt.figure(figsize=(10, 6))
-plt.plot(daily_data, label='Observed Stock Prices')
-plt.plot(future_predictions, label='Forecasted Stock Prices', linestyle='--')
-plt.title('Stock Price Forecast Using Holt-Winters Method')
-plt.xlabel('Date')
-plt.ylabel('Stock Price')
+# Plot training and test data with predictions
+plt.subplot(1, 2, 1)
+plt.plot(yearly_data.index[:train_size], train, label='Training Data', color='blue')
+plt.plot(yearly_data.index[train_size:], test, label='Test Data', color='green')
+plt.plot(yearly_data.index[train_size:], predictions, label='Predictions', color='orange')
+plt.title('Test Predictions')
+plt.xlabel('Year')
+plt.ylabel('Close Price')
 plt.legend()
+
+# Plot original data with final forecast
+plt.subplot(1, 2, 2)
+plt.plot(yearly_data.index, yearly_data.values, label='Original Data', color='blue')
+future_years = pd.date_range(start=yearly_data.index[-1] + pd.DateOffset(years=1), periods=future_steps, freq='Y')
+plt.plot(future_years, final_forecast, label='Future Forecast', color='orange')
+plt.title('Future Forecast')
+plt.xlabel('Year')
+plt.ylabel('Close Price')
+plt.legend()
+
+plt.tight_layout()
 plt.show()
-print(future_predictions)
+
 
 ```
 
 ### OUTPUT:
 
-
-#### TEST_PREDICTION:
-![{8F139937-03B5-4CCA-B17A-E680075185C3}](https://github.com/user-attachments/assets/17871f59-f02e-4b35-b4fd-ecec476d4868)
-![{0BACEAE2-1C1A-4302-BFB3-A6F018365A83}](https://github.com/user-attachments/assets/6005ad7e-d64b-4eff-84c5-06a6e8b2fce3)
-
-
-#### FINAL_PREDICTION:
-![{8A3E93BA-17C7-425B-8A8E-0F040AD4C827}](https://github.com/user-attachments/assets/ab782915-51ed-4e45-960c-c060381de787)
-
+# TEST AND FINAL PREDICTION:
+![{56F1A46B-0062-44BE-B32D-388BC0497FE9}](https://github.com/user-attachments/assets/761adbb3-c844-46b7-88e7-fe3c4a6a0573)
 
 ### RESULT:
 Thus the program is executed successfully based on the Holt Winters Method model.
